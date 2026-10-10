@@ -1,0 +1,67 @@
+{
+  "name": "judicial",
+  "version": "5.11.14",
+  "description": "قسم التحقيق والأجانب - نسخة نظيفة بدون بيانات حملات الوافدين",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "postinstall": "electron-builder install-app-deps",
+    "dist": "electron-builder --win nsis"
+  },
+  "type": "commonjs",
+  "dependencies": {
+    "better-sqlite3": "^12.4.1"
+  },
+  "devDependencies": {
+    "electron": "^44.3.0",
+    "electron-builder": "^26.15.3"
+  },
+  "build": {
+    "appId": "jo.psd.madaba.judicial.clean",
+    "productName": "قسم التحقيق والأجانب - نسخة نظيفة",
+    "asar": true,
+    "files": [
+      "**/*",
+      "!dist/**",
+      "!README*.txt",
+      "!مراجعة_البيانات.txt",
+      "!.github/**",
+      "!.git/**",
+      "!*.db",
+      "!*.db-*",
+      "!backups/**"
+    ],
+    "extraResources": [
+      {
+        "from": "templates",
+        "to": "templates"
+      },
+      {
+        "from": "assets",
+        "to": "assets"
+      }
+    ],
+    "win": {
+      "icon": "assets/icon.ico",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "قسم التحقيق والأجانب-نسخة-نظيفة-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "قسم التحقيق والأجانب - نسخة نظيفة",
+      "installerIcon": "assets/icon.ico",
+      "uninstallerIcon": "assets/icon.ico"
+    },
+    "artifactName": "قسم التحقيق والأجانب-نسخة-نظيفة-Setup-${version}.${ext}"
+  }
+}
