@@ -1,0 +1,3 @@
+Judicial Clean 5.11.14
+Windows x64 NSIS installer built by .github/workflows/build-windows.yml.
+No campaign database is included.
