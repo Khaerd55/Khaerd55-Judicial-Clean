@@ -79,7 +79,7 @@ function detForm(index=-1){
   const chooser=document.getElementById('detSourceSelect');
   if(prev?.source_kind==='memo'){
     const match=detSources.findIndex(p=>Number(p.source_person_id)===Number(prev.source_person_id));
-    if(match>=0){chooser.value=String(match);released.disabled=true;}
+    if(match>=0){chooser.value=String(match);released.disabled=false;}
   }
   chooser.onchange=()=>{
     const idx=chooser.value;
@@ -90,7 +90,7 @@ function detForm(index=-1){
     document.getElementById('detNat').value=selected.nationality||'';
     document.getElementById('detHoldDate').value=detIso(selected.detention_date)?selected.detention_date:'';
     released.value=selected.released?'1':'0';
-    released.disabled=true;
+    released.disabled=false;
   };
   document.getElementById('detPersonForm').onsubmit=e=>{
     e.preventDefault();
@@ -102,7 +102,7 @@ function detForm(index=-1){
       nationality:document.getElementById('detNat').value.trim(),
       detention_date:document.getElementById('detHoldDate').value,
       center:document.getElementById('detCenter').value,
-      released:p?Number(p.released):Number(released.value)
+      released:Number(released.value)
     };
     if(!obj.name)return detAlert('أدخل اسم الموقوف');
     if(index>=0)detRows[index]=obj;else detRows.push(obj);
@@ -120,7 +120,93 @@ async function detSave(showMessage=true){
   if(showMessage)detAlert('تم حفظ كشف المواقيف');
   return true;
 }
-document.getElementById('detAdd').onclick=async()=>{await detRefreshSources();detForm();};
+function detBulkForm(){
+  const memoOption=(p,i)=>'<option value="'+i+'">'+esc(p.name)+' — '+esc(p.status)+' — '+esc(p.memo_date||'')+'</option>';
+  const allChoices=detSources.map(memoOption).join('');
+  const rowHtml=(n,defaultCenter='المديرية')=>'<section class="detBatchPerson">'+
+    '<div class="detBatchTitle"><b>الشخص '+n+'</b><button type="button" class="detBatchRemove smallBtn danger">إزالة</button></div>'+
+    '<div class="gridForm">'+
+    '<label class="full">بحث عن اسم من المذكرات<input class="detBatchSearch" placeholder="اكتب الاسم للبحث"></label>'+
+    '<label class="full">اختر من مذكرات الاحتفاظ والإفراج (اختياري)<select class="detBatchSource"><option value="">-- إدخال يدوي --</option>'+allChoices+'</select></label>'+
+    '<label class="full">الاسم<input class="detBatchName" maxlength="200" required></label>'+
+    '<label>الجنسية<input class="detBatchNat" maxlength="80"></label>'+
+    '<label>تاريخ التوقيف<input class="detBatchDate" type="date"></label>'+
+    '<label>موقوف لدى<select class="detBatchCenter">'+detCenterOptions(defaultCenter)+'</select></label>'+
+    '<label>مفرج عنه<select class="detBatchReleased"><option value="0">لا</option><option value="1">نعم</option></select></label>'+
+    '</div></section>';
+  modal('<h2>إضافة عدة مواقيف مرة واحدة</h2>'+
+    '<div class="notice">اختر أشخاصاً من المذكرات أو اكتب أسماء يدوياً. حالة الإفراج تنسحب تلقائياً، ويمكنك تعديلها لكل شخص في الكشف فقط.</div>'+
+    '<form id="detBulkForm"><div id="detBulkRows">'+rowHtml(1)+'</div>'+
+    '<button type="button" id="detBulkAdd" class="addPersonBtn">+ إضافة شخص آخر</button>'+
+    '<button type="submit" class="primary detBulkSave">إضافة جميع الأشخاص للكشف</button></form>');
+  const root=document.getElementById('detBulkRows');
+  const renumber=()=>[...root.querySelectorAll('.detBatchPerson')].forEach((r,i)=>r.querySelector('.detBatchTitle b').textContent='الشخص '+(i+1));
+  function bindRow(row){
+    const chooser=row.querySelector('.detBatchSource');
+    const search=row.querySelector('.detBatchSearch');
+    search.oninput=()=>{
+      const current=chooser.value;
+      const needle=search.value.trim().toLowerCase();
+      chooser.innerHTML='<option value="">-- إدخال يدوي --</option>'+
+        detSources.map((p,i)=>({p,i})).filter(({p})=>(p.name||'').toLowerCase().includes(needle)).map(({p,i})=>memoOption(p,i)).join('');
+      if([...chooser.options].some(o=>o.value===current))chooser.value=current;
+    };
+    chooser.onchange=()=>{
+      const idx=chooser.value;if(idx==='')return;
+      const p=detSources[Number(idx)];if(!p)return;
+      row.querySelector('.detBatchName').value=p.name||'';
+      row.querySelector('.detBatchNat').value=p.nationality||'';
+      row.querySelector('.detBatchDate').value=detIso(p.detention_date)?p.detention_date:'';
+      row.querySelector('.detBatchReleased').value=p.released?'1':'0';
+      // The release field deliberately remains editable.
+    };
+    row.querySelector('.detBatchRemove').onclick=()=>{
+      if(root.querySelectorAll('.detBatchPerson').length===1){
+        return detAlert('اترك شخصاً واحداً على الأقل في النموذج');
+      }
+      row.remove();renumber();
+    };
+  }
+  bindRow(root.querySelector('.detBatchPerson'));
+  document.getElementById('detBulkAdd').onclick=()=>{
+    const n=root.querySelectorAll('.detBatchPerson').length;
+    if(n>=100)return detAlert('الحد الأقصى 100 شخص في عملية واحدة');
+    const previous=root.querySelector('.detBatchPerson:last-child');
+    const center=previous?.querySelector('.detBatchCenter')?.value||'المديرية';
+    root.insertAdjacentHTML('beforeend',rowHtml(n+1,center));
+    bindRow(root.querySelector('.detBatchPerson:last-child'));
+    renumber();
+  };
+  document.getElementById('detBulkForm').onsubmit=e=>{
+    e.preventDefault();
+    const people=[];
+    for(const row of root.querySelectorAll('.detBatchPerson')){
+      const chooser=row.querySelector('.detBatchSource');
+      const p=chooser.value===''?null:detSources[Number(chooser.value)];
+      const name=row.querySelector('.detBatchName').value.trim();
+      if(!name)return detAlert('أدخل اسم كل شخص، أو احذف السطر الفارغ');
+      const person={
+        source_kind:p?'memo':'manual',
+        source_person_id:p?p.source_person_id:null,
+        name,nationality:row.querySelector('.detBatchNat').value.trim(),
+        detention_date:row.querySelector('.detBatchDate').value,
+        center:row.querySelector('.detBatchCenter').value,
+        released:Number(row.querySelector('.detBatchReleased').value)
+      };
+      if(p&&(detRows.some(x=>x.source_kind==='memo'&&Number(x.source_person_id)===Number(p.source_person_id))||
+        people.some(x=>x.source_kind==='memo'&&Number(x.source_person_id)===Number(p.source_person_id)))){
+        return detAlert('الشخص '+name+' مُضاف مسبقاً إلى الكشف');
+      }
+      people.push(person);
+    }
+    if(detRows.length+people.length>500)return detAlert('الحد الأقصى 500 شخص في الكشف');
+    detRows.push(...people);
+    document.getElementById('modal').classList.remove('show');
+    detRender();
+    detAlert('تمت إضافة '+people.length+' شخص إلى الكشف');
+  };
+}
+document.getElementById('detAdd').onclick=async()=>{await detRefreshSources();detBulkForm();};
 
 document.getElementById('detWord').onclick=async()=>{
   if(!await detSave(false))return;

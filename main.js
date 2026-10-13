@@ -17,11 +17,23 @@ const factoryTemplatePath=(name)=>resourceDir('templates',name);
 const editableTemplatesDir=()=>path.join(app.getPath('userData'),'editable-templates');
 function templatePath(name){
  const src=factoryTemplatePath(name),dst=path.join(editableTemplatesDir(),name);
- try{if(!fs.existsSync(dst)&&fs.existsSync(src)){fs.mkdirSync(path.dirname(dst),{recursive:true});fs.copyFileSync(src,dst)}}catch{}
+ try{
+   if(!fs.existsSync(dst)&&fs.existsSync(src)){
+     fs.mkdirSync(path.dirname(dst),{recursive:true});fs.copyFileSync(src,dst);
+   }
+   // The original detention Word is only on the workstation, not in public GitHub.
+   if(name==='كشف مواقيف.docx'&&fs.existsSync(dst)){
+     const original=path.join(editableTemplatesDir(),'.originals',name);
+     if(!fs.existsSync(original)){
+       fs.mkdirSync(path.dirname(original),{recursive:true});
+       fs.copyFileSync(dst,original,fs.constants.COPYFILE_EXCL);
+     }
+   }
+ }catch{}
  return fs.existsSync(dst)?dst:src;
 }
 function listFactoryTemplates(){
- const rels=["احصائية العمالة الوافدة للجنسيات المعتمدة لعام 2026.docx", "تعليمات النظارات احد واربعاء.docx", "احصائية العمالة الوافداة المعتمدة لعام 2026.docx", "المذكرة القديمة - احتفاظ.docx", "مخاطبة الوسط التقرير اليومي.docx", "المذكرة القديمة - افراج.docx"];
+ const rels=["احصائية العمالة الوافدة للجنسيات المعتمدة لعام 2026.docx", "تعليمات النظارات احد واربعاء.docx", "احصائية العمالة الوافداة المعتمدة لعام 2026.docx", "المذكرة القديمة - احتفاظ.docx", "مخاطبة الوسط التقرير اليومي.docx", "المذكرة القديمة - افراج.docx", "كشف مواقيف.docx"];
  return rels.map(relative=>({relative,name:path.basename(relative)}));
 }
 const pad=n=>String(n).padStart(2,'0');
@@ -292,7 +304,7 @@ ipcMain.handle('restore-backup',async()=>{try{
 ipcMain.handle('open-template',async(_,name)=>{let p=templatePath(name);if(!fs.existsSync(p))return {ok:false,error:'النموذج غير موجود'};await shell.openPath(p);return {ok:true}});
 ipcMain.handle('templates-list',async()=>{try{return {ok:true,items:listFactoryTemplates().map(x=>({...x,path:templatePath(x.relative)}))}}catch(e){return {ok:false,error:String(e?.message||e)}}});
 ipcMain.handle('template-open-edit',async(_,rel)=>{try{const p=templatePath(String(rel||''));if(!fs.existsSync(p))return {ok:false,error:'النموذج غير موجود'};const err=await shell.openPath(p);return err?{ok:false,error:err}:{ok:true,path:p}}catch(e){return {ok:false,error:String(e?.message||e)}}});
-ipcMain.handle('template-restore-one',async(_,rel)=>{try{rel=String(rel||'').replace(/\//g,path.sep);const src=factoryTemplatePath(rel),dst=path.join(editableTemplatesDir(),rel);if(!fs.existsSync(src))return {ok:false,error:'النسخة الأصلية غير موجودة'};fs.mkdirSync(path.dirname(dst),{recursive:true});fs.copyFileSync(src,dst);return {ok:true,path:dst}}catch(e){return {ok:false,error:String(e?.message||e)}}});
+ipcMain.handle('template-restore-one',async(_,rel)=>{try{rel=String(rel||'').replace(/\//g,path.sep);const factory=factoryTemplatePath(rel),src=rel==='كشف مواقيف.docx'&&!fs.existsSync(factory)?path.join(editableTemplatesDir(),'.originals',rel):factory,dst=path.join(editableTemplatesDir(),rel);if(!fs.existsSync(src))return {ok:false,error:'النسخة الأصلية غير موجودة. افتح كشف المواقيف واستورد النموذج الأصلي أولاً'};fs.mkdirSync(path.dirname(dst),{recursive:true});fs.copyFileSync(src,dst);return {ok:true,path:dst}}catch(e){return {ok:false,error:String(e?.message||e)}}});
 ipcMain.handle('templates-open-folder',async()=>{try{const dir=editableTemplatesDir();fs.mkdirSync(dir,{recursive:true});for(const x of listFactoryTemplates())templatePath(x.relative);const err=await shell.openPath(dir);return err?{ok:false,error:err}:{ok:true,path:dir}}catch(e){return {ok:false,error:String(e?.message||e)}}});
 
 

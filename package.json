@@ -1,6 +1,6 @@
 {
   "name": "judicial",
-  "version": "5.12.1",
+  "version": "5.12.2",
   "description": "قسم التحقيق والأجانب - نسخة نظيفة بدون بيانات حملات الوافدين",
   "main": "main.js",
   "scripts": {

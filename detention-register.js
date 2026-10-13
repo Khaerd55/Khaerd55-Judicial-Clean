@@ -74,6 +74,15 @@ function uniqueFile(dir,name){
   return f;
 }
 function templatePath(){return path.join(app.getPath('userData'),'editable-templates',TEMPLATE_NAME);}
+function originalTemplatePath(){return path.join(app.getPath('userData'),'editable-templates','.originals',TEMPLATE_NAME);}
+function ensureOriginal(){
+  const editable=templatePath(),original=originalTemplatePath();
+  if(!fs.existsSync(original)&&fs.existsSync(editable)){
+    fs.mkdirSync(path.dirname(original),{recursive:true});
+    fs.copyFileSync(editable,original,fs.constants.COPYFILE_EXCL);
+  }
+  return fs.existsSync(original)?original:null;
+}
 function register(ipcMain,getDb){
   ipcMain.handle('detention-reports',()=>{
     try{return {ok:true,items:getDb().prepare('SELECT id,report_date,updated_at FROM detention_reports ORDER BY report_date DESC,id DESC').all()};}catch(e){return err(e);}
@@ -127,21 +136,30 @@ function register(ipcMain,getDb){
       const input=pick.filePaths[0];
       const fd=fs.openSync(input,'r');const header=Buffer.alloc(4);fs.readSync(fd,header,0,4,0);fs.closeSync(fd);
       if(header[0]!==0x50||header[1]!==0x4b)throw Error('الملف ليس نموذج Word DOCX صحيحاً');
-      const dest=templatePath();fs.mkdirSync(path.dirname(dest),{recursive:true});
-      if(fs.existsSync(dest)){
-        const q=await dialog.showMessageBox({type:'warning',buttons:['استبدال النموذج','إلغاء'],defaultId:1,cancelId:1,message:'يوجد نموذج كشف محفوظ. هل تريد استبداله؟'});
+      const dest=templatePath(),original=originalTemplatePath();
+      fs.mkdirSync(path.dirname(dest),{recursive:true});
+      const oldExists=fs.existsSync(dest);
+      if(oldExists){
+        const q=await dialog.showMessageBox({type:'warning',buttons:['تغيير النموذج المعتمد','إلغاء'],defaultId:1,cancelId:1,message:'سيتم استبدال النموذج المعتمد، مع الاحتفاظ بالأصل السابق قبل التغيير. هل تريد المتابعة؟'});
         if(q.response!==0)return {ok:false,canceled:true};
+        ensureOriginal();
       }
       if(path.resolve(input)!==path.resolve(dest))fs.copyFileSync(input,dest);
+      // First imported file becomes the restorable original, kept in backups.
+      if(!fs.existsSync(original)){
+        fs.mkdirSync(path.dirname(original),{recursive:true});
+        fs.copyFileSync(dest,original,fs.constants.COPYFILE_EXCL);
+      }
       return {ok:true};
     }catch(e){return err(e);}
   });
-  ipcMain.handle('detention-template-status',()=>({ok:true,exists:fs.existsSync(templatePath())}));
+  ipcMain.handle('detention-template-status',()=>{const original=ensureOriginal();return {ok:true,exists:fs.existsSync(templatePath()),restorable:!!original};});
   ipcMain.handle('detention-word',(_,id)=>{
     let jsonPath='';
     try{
       const db=getDb(),report=db.prepare('SELECT * FROM detention_reports WHERE id=?').get(Number(id));
       if(!report)throw Error('احفظ الكشف أولاً');
+      ensureOriginal();
       const source=templatePath();
       if(!fs.existsSync(source))throw Error('استورد نموذج كشف المواقيف الأصلي أولاً');
       const destDir=path.join(app.getPath('documents'),'تقارير قسم التحقيق والأجانب');
@@ -149,6 +167,9 @@ function register(ipcMain,getDb){
       const out=uniqueFile(destDir,safeFile(report.report_date));
       const payload={
         report_date:report.report_date,day_name:dayName(report.report_date),
+        title:'كشف بأعداد واسماء المواقيف داخل نظارة مديرية شرطة مادبا والمراكز الأمنية ليوم '+dayName(report.report_date)+' الموافق '+wordDate(report.report_date),
+        case_type:'قضائي',detention_order:'القضائية',
+        centers:CENTERS,
         rows:reportRows(db,report.id).map(r=>({
           ...r,detention_date:wordDate(r.detention_date),released:r.released?'نعم':'لا'
         }))
@@ -158,7 +179,7 @@ function register(ipcMain,getDb){
       const script=app.isPackaged?path.join(process.resourcesPath,'detention-word.ps1'):path.join(__dirname,'detention-word.ps1');
       const exec=spawnSync('powershell.exe',['-NoProfile','-ExecutionPolicy','Bypass','-File',script,source,out,jsonPath],{encoding:'utf8',windowsHide:true,timeout:120000});
       if(exec.error)throw exec.error;
-      if(exec.status!==0)throw Error((exec.stderr||exec.stdout||'تعذر إنشاء كشف Word').trim());
+      if(exec.status!==0)throw Error('تعذر إنشاء كشف Word: '+String(exec.stderr||exec.stdout||'خطأ غير معروف').trim().slice(-900));
       const opened=shell.openPath(out);if(opened&&typeof opened.catch==='function')opened.catch(()=>{});
       return {ok:true,path:out};
     }catch(e){return err(e);}
