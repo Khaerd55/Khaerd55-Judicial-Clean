@@ -52,7 +52,7 @@ try {
   $ns.AddNamespace('w',$w)
   $rows=@($result.SelectNodes('//w:body/w:tbl/w:tr',$ns))
   if($rows.Count -ne 11){throw "Expected 11 rows (1 header, 5 titles, 5 data rows), got $($rows.Count)"}
-  $joined=$result.InnerText
+  $joined=(@($result.SelectNodes('//w:t',$ns)) | ForEach-Object { $_.InnerText }) -join ''
   foreach($word in @('TESTPERSON','PERSON2','Judicial','Court','Automated report 13/10/2026','Signature')) {
     if(-not $joined.Contains($word)){throw "Missing data: $word"}
   }
