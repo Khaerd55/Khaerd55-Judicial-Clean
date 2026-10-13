@@ -44,6 +44,7 @@ function init(year){
  CREATE TABLE IF NOT EXISTS memos(id INTEGER PRIMARY KEY AUTOINCREMENT,memo_type TEXT,memo_date TEXT,person_name TEXT,birth_year TEXT,nationality TEXT,charge TEXT,detention_date TEXT,national_no TEXT,data_entry_id INTEGER,duty_officer_id INTEGER,judicial_officer_id INTEGER,created_at TEXT DEFAULT CURRENT_TIMESTAMP);
  CREATE TABLE IF NOT EXISTS memo_people(id INTEGER PRIMARY KEY AUTOINCREMENT,memo_id INTEGER,sort_order INTEGER DEFAULT 1,person_name TEXT,birth_year TEXT,nationality TEXT,charge TEXT,detention_date TEXT,national_no TEXT);
  CREATE TABLE IF NOT EXISTS stats_snapshot(detainee_id INTEGER PRIMARY KEY,status TEXT,nationality TEXT,arrest_date TEXT);`);
+ require('./detention-register').init(db);
  const memoCols2=db.prepare("PRAGMA table_info(memos)").all().map(x=>x.name);
  if(!memoCols2.includes('approver_text')) db.exec("ALTER TABLE memos ADD COLUMN approver_text TEXT DEFAULT ''");
  // V5.4.1: add template choice to existing databases without deleting old memo records.
@@ -441,3 +442,5 @@ ipcMain.handle('generate-word-detail',(_,date=today())=>{try{
  const z=cum.totals;u.push({t:2,r:13,c:2,v:z.total},{t:2,r:13,c:3,v:z.deported},{t:2,r:13,c:4,v:z.released},{t:2,r:13,c:5,v:z.waiting});
  return runWordReport('احصائية العمالة الوافدة للجنسيات المعتمدة لعام 2026.docx',safeReportName('الإحصائية حسب الجنسية',date),u);
 }catch(e){return {ok:false,error:String(e?.message||e)}}});;
+// كشف المواقيف: قنوات مستقلة تعمل على قاعدة بيانات سنة العمل الحالية.
+require('./detention-register').register(ipcMain,()=>db);

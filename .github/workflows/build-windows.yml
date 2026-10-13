@@ -3,6 +3,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main, master]
+  pull_request:
 permissions:
   contents: read
 jobs:
@@ -19,8 +20,12 @@ jobs:
           node --check main.js
           node --check preload.js
           node --check renderer.js
+          node --check detention-register.js
+          node --check detention-ui.js
       - name: Install locked dependencies
         run: npm ci
+      - name: Test detention report data handling
+        run: node --test tests/detention.test.js
       - name: Build NSIS installer
         run: npm run dist -- --publish never
         env:
@@ -28,7 +33,7 @@ jobs:
       - name: Upload Windows installer
         uses: actions/upload-artifact@v4
         with:
-          name: Judicial-Clean-Setup-5.11.14-x64
+          name: Judicial-Clean-Setup-5.12.0-x64
           path: dist/*.exe
           if-no-files-found: error
           retention-days: 30
