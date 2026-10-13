@@ -1,6 +1,6 @@
 {
   "name": "judicial",
-  "version": "5.11.14",
+  "version": "5.12.2",
   "description": "قسم التحقيق والأجانب - نسخة نظيفة بدون بيانات حملات الوافدين",
   "main": "main.js",
   "scripts": {
@@ -39,6 +39,10 @@
       {
         "from": "assets",
         "to": "assets"
+      },
+      {
+        "from": "detention-word.ps1",
+        "to": "detention-word.ps1"
       }
     ],
     "win": {

@@ -44,3 +44,18 @@ input:focus,textarea:focus,select:focus{
 #batchDf .batchSave{width:100%;margin-top:16px;border:0;background:#126fc5;color:#fff;padding:13px 18px;border-radius:8px;font-size:16px}
 
 .yearBar{background:#082744;color:#fff;padding:9px 28px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:15}.yearBar select,.yearBar button{padding:7px 12px;border-radius:7px;border:1px solid #789}.yearBar button{background:#126fc5;color:#fff;cursor:pointer}.yearBar #yearBadge{font-weight:bold;margin-right:auto}hr{border:0;border-top:1px solid #d7e0e9;margin:24px 0}
+
+/* كشف المواقيف */
+.cards{grid-template-columns:repeat(auto-fit,minmax(190px,1fr))}
+.detToolbar{display:flex;gap:14px;align-items:end;flex-wrap:wrap;margin:12px 0}
+.detToolbar label{display:flex;flex-direction:column;gap:6px}
+.detGroup{margin:20px 0}.detGroup h3{background:#f1a42b;color:#1d2636;text-align:center;padding:10px 14px;margin:0;font-size:17px}
+.detTable{min-width:1000px}.detTable th{background:#f2a22b;color:#172637;border:1px solid #333}
+.detTable td{border:1px solid #c8c8c8}.detEmpty td{color:#7a8692}
+.detHint{font-weight:600;color:#385a79;margin:12px 0}
+
+/* قائمة إدخال صغيرة بدلاً من عرض كشف المواقيف الكامل */
+.detRosterGroup{background:white;border:1px solid #d2dce6;border-radius:10px;margin:10px 0;overflow:hidden}.detRosterGroup summary{padding:12px 16px;background:#e8f0f8;cursor:pointer;font-weight:700}.detRosterPerson{padding:10px 14px;border-top:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;gap:12px}.detRosterPerson small{display:block;color:#64748b;margin-top:3px}.detRosterPerson button{white-space:nowrap}
+
+/* Batch detention entry */
+.detBatchPerson{border:1px solid #ccdae8;border-radius:10px;padding:14px;margin:14px 0;background:#f7fbff}.detBatchTitle{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}.detBulkSave{display:block;width:100%;padding:13px 18px;margin:14px 0;font-size:17px}.detBatchPerson input,.detBatchPerson select{min-width:0;width:100%}
