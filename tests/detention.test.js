@@ -10,9 +10,18 @@ Module._load=function(request,parent,isMain){
   };
   return originalLoad.call(this,request,parent,isMain);
 };
-const Database=require('better-sqlite3');
+const {DatabaseSync}=require('node:sqlite');
 const detention=require('../detention-register');
-const db=new Database(':memory:');
+const database=new DatabaseSync(':memory:');
+const db={
+ exec:sql=>database.exec(sql),
+ prepare:sql=>database.prepare(sql),
+ transaction:fn=>(...args)=>{
+  database.exec('BEGIN');
+  try{const result=fn(...args);database.exec('COMMIT');return result;}
+  catch(e){database.exec('ROLLBACK');throw e;}
+ }
+};
 db.exec(
   "CREATE TABLE memos (id INTEGER PRIMARY KEY,memo_type TEXT,memo_date TEXT);"+
   "CREATE TABLE memo_people(id INTEGER PRIMARY KEY,memo_id INTEGER,person_name TEXT,birth_year TEXT,national_no TEXT,nationality TEXT,detention_date TEXT);"
