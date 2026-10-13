@@ -67,7 +67,7 @@ function win(){
  mainWindow.on('closed',()=>{mainWindow=null});
 }
 
-app.whenReady().then(()=>{let c=loadConfig();currentYear=Number(c.currentYear)||2026;init(currentYear);win()});app.on('window-all-closed',()=>{if(process.platform!=='darwin')app.quit()});
+app.whenReady().then(async()=>{await require('./legacy-data-migration').migrateIfNeeded();let c=loadConfig();currentYear=Number(c.currentYear)||2026;init(currentYear);win()});app.on('window-all-closed',()=>{if(process.platform!=='darwin')app.quit()});
 
 ipcMain.handle('list',(_,q='')=>{let s=`%${q.trim()}%`;return db.prepare(`SELECT d.*,
  (SELECT h.action_date FROM status_history h WHERE h.detainee_id=d.id ORDER BY h.id DESC LIMIT 1) AS action_date

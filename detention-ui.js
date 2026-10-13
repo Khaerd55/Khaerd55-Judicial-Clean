@@ -15,22 +15,21 @@ const detReportDate=()=>document.getElementById('detDate').value||td();
 const detIso=s=>/^\d{4}-\d{2}-\d{2}$/.test(String(s||''));
 function detRender(){
   const container=document.getElementById('detTables');
-  container.innerHTML=detCenters.map(([center,title])=>{
+  // عرض أسماء مختصر للتحرير فقط؛ الكشف الرسمي لا يُعرض داخل البرنامج.
+  const groups=detCenters.map(([center,title])=>{
     const people=detRows.map((r,index)=>({...r,_index:index})).filter(r=>r.center===center);
-    const data=people.length?people.map((r,i)=>
-      '<tr><td>'+(i+1)+'</td><td>'+esc(r.name)+'</td><td>'+esc(r.nationality||'')+
-      '</td><td>قضائي</td><td>القضائية</td><td>'+esc(r.detention_date||'')+
-      '</td><td>'+esc(r.center)+'</td><td><span class="badge '+(r.released?'rel':'wait')+'">'+(r.released?'نعم':'لا')+
-      '</span></td><td><button class="smallBtn detEdit" data-idx="'+r._index+'">تعديل</button> '+
-      '<button class="smallBtn danger detRemove" data-idx="'+r._index+'">حذف</button></td></tr>').join(''):
-      '<tr class="detEmpty"><td>1</td><td>*******</td><td>*****</td><td>*****</td><td>******</td><td>*******</td><td>'+esc(center)+'</td><td>********</td><td>—</td></tr>';
-    return '<div class="detGroup"><h3>'+esc(title)+' <small>('+people.length+')</small></h3>'+
-      '<div class="tableWrap"><table class="detTable"><thead><tr>'+
-      '<th>ت</th><th>الاسم</th><th>الجنسية</th><th>نوع القضية</th><th>أمر التوقيف</th>'+
-      '<th>تاريخ التوقيف</th><th>موقوف لدى</th><th>مفرج عنه</th><th>إدارة</th>'+
-      '</tr></thead><tbody>'+data+'</tbody></table></div></div>';
-  }).join('');
-  document.getElementById('detCount').textContent='عدد الأشخاص في الكشف: '+detRows.length;
+    if(!people.length)return '';
+    const items=people.map(r=>
+      '<div class="detRosterPerson"><div><b>'+esc(r.name)+'</b>'+
+      '<small>الجنسية: '+esc(r.nationality||'غير محددة')+' — مفرج عنه: '+(r.released?'نعم':'لا')+'</small></div>'+
+      '<div><button class="smallBtn detEdit" data-idx="'+r._index+'">تعديل</button> '+
+      '<button class="smallBtn danger detRemove" data-idx="'+r._index+'">حذف</button></div></div>'
+    ).join('');
+    return '<details class="detRosterGroup" open><summary>'+esc(title)+' ('+people.length+')</summary>'+items+'</details>';
+  }).filter(Boolean);
+  container.innerHTML=groups.length?'<h3>الأشخاص الذين سيتم إدراجهم في الكشف عند الطباعة</h3>'+groups.join(''):
+    '<div class="notice">ما أضفت أشخاص للكشف بعد. اضغط «إضافة موقوف» لاختيارهم.</div>';
+  document.getElementById('detCount').textContent='عدد الأشخاص المختارين: '+detRows.length;
   container.querySelectorAll('.detEdit').forEach(btn=>btn.onclick=()=>detForm(Number(btn.dataset.idx)));
   container.querySelectorAll('.detRemove').forEach(btn=>btn.onclick=()=>{
     const i=Number(btn.dataset.idx);
@@ -122,12 +121,12 @@ async function detSave(showMessage=true){
   return true;
 }
 document.getElementById('detAdd').onclick=async()=>{await detRefreshSources();detForm();};
-document.getElementById('detSave').onclick=()=>detSave();
+
 document.getElementById('detWord').onclick=async()=>{
   if(!await detSave(false))return;
   const r=await api.detentionWord(detReportId);
   if(!r?.ok)return detAlert(r?.error||'تعذر إنشاء ملف Word');
-  detAlert('تم إنشاء الكشف وفتح ملف Word');
+  detAlert('تم تجهيز كشف المواقيف وفتح ملف Word للطباعة');
 };
 document.getElementById('detImport').onclick=async()=>{
   const r=await api.detentionImportTemplate();
